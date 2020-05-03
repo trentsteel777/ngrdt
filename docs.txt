@@ -1,0 +1,18 @@
+# Option return formula
+# https://github.com/trentsteel777/pygrdt/blob/master/analysisportal/views.py
+
+#https://stackoverflow.com/a/54573017
+nvm alias default ''; nvm install 14.1.0
+npm install yarn -g
+sudo apt install cmake
+
+#https://stackoverflow.com/questions/91576/crti-o-file-missing
+#https://stackoverflow.com/questions/6329887/compiling-problems-cannot-find-crt1-o
+sudo apt-get install libc6-dev
+
+#https://askubuntu.com/questions/386265/media-change-please-insert-the-disc-labeled-when-trying-to-install-ruby-on-ra
+sudo sed -i '/cdrom/d' /etc/apt/sources.lists
+
+#https://stackoverflow.com/questions/28725955/how-do-i-test-a-single-file-using-jest
+npm i -g jest-cli
+jest premium.test.js

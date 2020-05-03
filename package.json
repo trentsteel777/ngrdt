@@ -1,0 +1,29 @@
+{
+  "name": "findpremium",
+  "version": "1.0.0",
+  "description": "Command-line application to find the populations of a list of countries passed as an argument.",
+  "main": "premium.js",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "chalk": "^2.4.2",
+    "cli-table": "^0.3.1",
+    "ejdb2_node": "^1.0.33",
+    "moment": "^2.25.1",
+    "sleep": "^6.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-import": "^2.17.2",
+    "eslint-plugin-node": "^9.0.1",
+    "eslint-plugin-promise": "^4.1.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "jest": "^24.8.0"
+  },
+  "scripts": {
+    "install": "chmod +x premium.js",
+    "test": "jest"
+  },
+  "author": "Stephen Brennan",
+  "license": "MIT"
+}
