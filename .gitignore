@@ -2,3 +2,6 @@
 node_modules/
 optionchains.db
 optionchains.db-wal
+*.log
+*.db
+*.db-wal

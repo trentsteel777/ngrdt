@@ -3,5 +3,24 @@
 /**
  * @fileOverview util functions
  */
-exports.trimLowerCase = arg => arg.trim().toLowerCase()
-exports.hasCountryNamesArg = arr => arr.length >= 3
+const moment = require('moment')
+
+exports.thirdFridayOfNextMonth = (function () {
+    // moment().format('dddd DD-MMMM-YYYY hh:mm:ss a')
+    return moment()
+        .add(1, 'M')
+        .utc()
+        .startOf('month')
+        .endOf('isoweek')
+        .add(2, 'w')
+        .subtract(2, 'd')
+        .startOf('day')
+        .unix()
+})()
+
+exports.today = (function () {
+    return moment()
+        .utc()
+        .startOf('day')
+        .unix()
+})()

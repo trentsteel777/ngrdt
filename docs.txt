@@ -16,3 +16,27 @@ sudo sed -i '/cdrom/d' /etc/apt/sources.lists
 #https://stackoverflow.com/questions/28725955/how-do-i-test-a-single-file-using-jest
 npm i -g jest-cli
 jest premium.test.js
+jest premium.test.js -t 'thirdFriday'
+jest utils.test.js -t 'today'
+
+#https://unix.stackexchange.com/questions/140350/linux-g-command-not-found
+sudo apt-get install build-essential
+
+# Code to read from EJDB2
+for (let i = 0; i < 3/* symbols.length */; i++) {
+    const q = db.createQuery('/*', symbols[i]);
+
+    for await (const doc of q.stream()) {
+        console.log(`Found ${doc.id} : ${doc.json.underlyingSymbol}`);
+    }
+}
+
+"https://query2.finance.yahoo.com/v7/finance/options/MSFT?formatted=true&lang=en-US&region=US&date=1592524800"
+// get the next month out using yahoo functions
+// select watchlist and loop over watch list
+// log statements
+//  get and store data -> 
+// do analysis
+// update google sheet
+
+// data model -> symbol -> date -> optionchains

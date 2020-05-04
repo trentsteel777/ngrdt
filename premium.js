@@ -1,62 +1,49 @@
 #!/usr/bin/env node
 'use strict'
 
+const fs = require('fs')
 const axios = require('axios')
 const { EJDB2 } = require('ejdb2_node')
-const moment = require('moment')
-var sleep = require('sleep')
-//https://finance.yahoo.com/quotes/MSFT,AAPL,AMZN,FB,BRK.B,GOOGL,GOOG,JNJ,JPM,V
-// https://www.zacks.com/funds/etf/SPY/holding
-// $('div[id^="Leaderboard-bottom"]').html($('#etf_holding_table').DataTable().columns( 1 ).data().eq( 0 ).sort().unique().join( '<br>' ))
-async function run() {
+const { thirdFridayOfNextMonth, today } = require('./src/utils.js')
+const logger = require('./src/logger.js')
+const sleep = require('sleep')
+var winston = require('winston')
+
+const symbols = fs.readFileSync('./src/resources/watchlist.txt').toString().split("\n")
+
+async function fetchAndSave() {
   const db = await EJDB2.open('optionchains.db', { truncate: true })
-  const symbols = [ 'MSFT','AAPL','AMZN'/* ,'BRK.B','GOOG','JNJ','JPM','V' */ ] //'RDS-B'
-  for(var i = 0; i < symbols.length; i++) {
-    let symbol = symbols[i]
-    let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbol}?formatted=true&lang=en-US&region=US&date=${thirdFridayOfNextMonth()}`
-    
-    axios.get(apiUrl).then(response => {
-      var optionChain = response.data.optionChain
+
+  for (let i = 0; i < 3/* symbols.length */; i++) {
+    try {
+      let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbols[i]}?formatted=true&lang=en-US&region=US&date=${thirdFridayOfNextMonth}`
   
-      db.put(symbol, optionChain)
-    })
-    .catch(err => {
-      console.log('Error fetching data from: ' + err.config.url)
-    })
-    .finally(() => db.close())
+      let response = await axios.get(apiUrl)
   
-    sleep.sleep(1)
+      let key = response.data.optionChain.result[0].underlyingSymbol
+      let json = response.data.optionChain.result[0]
+  
+      await db.put(key, json, today)
+
+      sleep.msleep(500)
+    }
+    catch(e) {
+      console.log('Error: ' + e)
+    }
   }
-   
-}
-run()
-.catch(err => {
-  console.log('Error: ' + err)
-});
 
-function sleeper(ms) {
-  return function(x) {
-    return new Promise(resolve => setTimeout(() => resolve(x), ms));
-  };
-}
-  // get the next month out using yahoo functions
-  // select watchlist and loop over watch list
-  // log statements
-  //  get and store data -> 
-  // do analysis
-  // update google sheet
+  for (let i = 0; i < 3/* symbols.length */; i++) {
+    const q = db.createQuery('/*', symbols[i])
 
-  // data model -> symbol -> date -> optionchains
-  
-function thirdFridayOfNextMonth() {
-  // moment().format('dddd DD-MMMM-YYYY hh:mm:ss a')
-  return moment()
-    .add(1, 'M')
-    .utc()
-    .startOf('month')
-    .endOf('isoweek')
-    .add(2, 'w')
-    .subtract(2, 'd')
-    .startOf('day')
-    .unix()
+    for await (const doc of q.stream()) {
+        console.log(`Found ${doc.id} : ${doc.json.underlyingSymbol}`)
+    }
+  }
+
+  await db.close()
 }
+
+fetchAndSave()
+  .catch(e => {
+    console.log('Error: ' + e.message);
+  })
