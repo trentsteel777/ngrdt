@@ -5,3 +5,4 @@ optionchains.db-wal
 *.log
 *.db
 *.db-wal
+logs/
