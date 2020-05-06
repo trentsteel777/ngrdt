@@ -1,3 +1,5 @@
+# https://codelabs.developers.google.com/codelabs/sheets-api/#2
+
 # Option return formula
 # https://github.com/trentsteel777/pygrdt/blob/master/analysisportal/views.py
 
@@ -26,7 +28,8 @@ sudo apt-get install build-essential
 # INSTALLATION VM
 vi ~/.bash_profile, then insert NODE_ENV=production
 
-
+# Commit existing git project to a new repo in github
+https://www.softwarelab.it/2018/10/12/adding-an-existing-project-to-github-using-the-command-line/
 
 
 

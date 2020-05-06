@@ -8,6 +8,8 @@
     "chalk": "^2.4.2",
     "cli-table": "^0.3.1",
     "ejdb2_node": "^1.0.33",
+    "google-spreadsheet": "^3.0.11",
+    "googleapis": "^50.0.0",
     "moment": "^2.25.1",
     "sleep": "^6.1.0",
     "winston": "^3.2.1",
