@@ -9,7 +9,7 @@ const { logger } = require('./src/logger.js')
 const sleep = require('sleep')
 
 const symbols = fs.readFileSync('./src/resources/watchlist.txt').toString().split("\n")
-const symbolsLength = process.env.NODE_ENV !== 'production' ? 3 : symbols.length
+const symbolsLength = process.env.NODE_ENV !== 'production' ? 1 : symbols.length
 
 async function fetchAndSave() {
   logger.info(`Opening database.`)
@@ -34,11 +34,17 @@ async function fetchAndSave() {
     }
   }
 
-  for (let i = 0; i < symbolsLength; i++) {
-    const q = db.createQuery('/*', symbols[i])
 
-    for await (const doc of q.stream()) {
-      //logger.info(`Found ${doc.id} : ${doc.json.underlyingSymbol}`)
+  for (let i = 0; i < symbolsLength; i++) {
+    try { //"contractSymbol": "A200619C00070000"
+      const q = db.createQuery('/options/0/calls/*/percentChange/[raw = 0] | /options/0/calls/*/percentChange/raw + /hasMiniOptions', symbols[i]) // [hasMiniOptions = :hasMiniOptions]
+  
+      for await (const doc of q.stream()) { // .setBoolean('hasMiniOptions', false) .setBoolean('inTheMoney', true)
+        logger.info(`Found ${doc} `)
+      }
+    }
+    catch(e) {
+      logger.error('Error reading DB: ' + e)
     }
   }
 
