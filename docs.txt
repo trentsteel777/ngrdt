@@ -32,6 +32,8 @@ vi ~/.bash_profile, then insert NODE_ENV=production
 https://www.softwarelab.it/2018/10/12/adding-an-existing-project-to-github-using-the-command-line/
 
 
+# Run a javascript file with node e.g.
+node sheets.js
 
 
 
@@ -41,9 +43,52 @@ https://www.softwarelab.it/2018/10/12/adding-an-existing-project-to-github-using
 
 
 
+# GoogleSheets sample code
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
+// https://codelabs.developers.google.com/codelabs/sheets-api/#5
+// https://console.developers.google.com/apis/credentials/wizard?api=sheets.googleapis.com&project=findpremiums
+// https://www.fastcomet.com/tutorials/nodejs/google-spreadsheet-package
+// https://www.npmjs.com/package/google-spreadsheet
+async function run() {
 
+  // spreadsheet key is the long id in the sheets URL
+  const doc = new GoogleSpreadsheet('15U8xKl3Aleop4tZASViSOFAAmbGDTCiBYf9gsiXOj1Q');
 
+  // use service account creds
+  await doc.useServiceAccountAuth({
+    client_email: "",
+    private_key: ""
+  });
+  // OR load directly from json file if not in secure environment
+  //await doc.useServiceAccountAuth(require('./client_secret.json'));
+  // OR use API key -- only for read-only access to public sheets
+  //doc.useApiKey('AIzaSyBOHAN1ksskYgUEILsWzLVciK2PPYnzYLM');
+
+  await doc.loadInfo(); // loads document properties and worksheets
+  const sheet = doc.sheetsByIndex[0]; 
+  await sheet.loadCells('A1:E10'); // loads a range of cells
+
+  const a1 = sheet.getCell(0, 0); // access cells using a zero-based index
+
+  //const c6 = sheet.getCellByA1('C6'); // or A1 style notation
+
+  // access everything about the cell
+  console.log(a1.value);
+  //console.log(a1.formula);
+  //console.log(a1.formattedValue);
+
+  //console.log(doc.title);
+  //await doc.updateProperties({ title: 'renamed doc' });
+
+  //const sheet = doc.sheetsByIndex[0]; // or use doc.sheetsById[id]
+  //console.log(sheet.title);
+  //console.log(sheet.rowCount);
+
+  // adding / removing sheets
+  //const newSheet = await doc.addSheet({ title: 'hot new sheet!' });
+  //await newSheet.delete();
+}
 
 
 
