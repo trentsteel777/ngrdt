@@ -1,0 +1,20 @@
+PHASE 1:
+    commit to github
+    tag first version
+    Add googlesheet name to a config folder
+    Fix output of googlesheet correct - verify numbers are correct and needed columns are there
+
+PHASE 2:
+    Add information sheet to google docs
+        Add in system values / properties
+    can any google charts or reporting be added in the sheet
+    see if log files could be improved
+    daily email of log files
+    think about permissions of googlesheet
+
+PHASE 3:
+    typescript
+    write documentation - HOWTO, Installation, Purpose
+    Code linter and coverage
+    write proper tests
+    refactoring & remove unneeded files

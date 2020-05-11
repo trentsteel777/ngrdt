@@ -24,3 +24,7 @@ exports.today = (function () {
         .startOf('day')
         .unix()
 })()
+
+exports.formatUnixDate = (function(unixEpochTime) {
+    return moment.unix(unixEpochTime).format('YYYY-MM-DD')
+})
