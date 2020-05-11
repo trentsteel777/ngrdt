@@ -7,3 +7,4 @@ optionchains.db-wal
 *.db-wal
 logs/
 client_secret.json
+application_properties.json
