@@ -85,6 +85,14 @@ async function updateGoogleSheet(optionsArr) {
 
   outputSheet.clear()
 
+
+  if(outputSheet.rowCount < optionsArr.length) {
+    let missingRowCount = (optionsArr.length - outputSheet.rowCount) + 1
+    logger.info('Adding ' + missingRowCount + ' rows.')
+    let emptyRowArray = [...Array(missingRowCount)].map(e => Array(0))
+    outputSheet.addRows(emptyRowArray)
+  }
+
   await outputSheet.loadCells('A1:N' + (optionsArr.length + 1)); // loads a range of cells
 
   // PRINT HEADER
