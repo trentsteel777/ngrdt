@@ -93,7 +93,7 @@ async function updateGoogleSheet(optionsArr) {
     throw new Error(errMsg)
   }
   
-  outputSheet.clear()
+  await outputSheet.clear()
   
   let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE', 'EXPIRY', 'TYPE', 'LAST PRICE', 'MARGIN OF SAFETY', 
       'RETURN ON OPTION', 'EXPOSURE PER CONTRACT', 'CONTRACT', 'EARNINGS', 'DIVIDEND', '52 WEEK RANGE']
@@ -101,7 +101,7 @@ async function updateGoogleSheet(optionsArr) {
 
   if(outputSheet.rowCount < optionsArr.length) {
     let missingRowCount = optionsArr.length + 1
-    logger.info('Adding ' + missingRowCount + ' rows.')
+    logger.info('Creating ' + missingRowCount + ' rows.')
 
     var blankRow = {}
     for(let i = 0; i < headers.length; i++)  blankRow[headers[i]] = ''
@@ -112,7 +112,7 @@ async function updateGoogleSheet(optionsArr) {
   }
 
   await outputSheet.loadCells('A1:N' + (optionsArr.length + 1)); // loads a range of cells
-
+  const batchSize = 1000
   for(let i = 0; i < optionsArr.length; i++) {
     let option = optionsArr[i]
     let cellIndx = i + 1
@@ -134,8 +134,14 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.dividendDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.fiftyTwoWeekRange
 
-    // Save data at the end OR every 1000 records
-    if(i + 1 === optionsArr.length || i % 1000 === 0) {
+    if(i + 1 === optionsArr.length) {
+      logger.info('POSTing final data to spreadsheet.')
+      await outputSheet.saveUpdatedCells()
+    }
+    else if(i !== 0 && i % batchSize === 0) {
+      let num = parseInt(i / batchSize)
+      let lastBatch = parseInt(optionsArr.length / batchSize)
+      logger.info(`POSTing batch ${num} of ${lastBatch} to spreadsheet.`)
       await outputSheet.saveUpdatedCells()
     }
   }
