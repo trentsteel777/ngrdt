@@ -12,6 +12,9 @@ sudo apt install cmake
 #https://stackoverflow.com/questions/6329887/compiling-problems-cannot-find-crt1-o
 sudo apt-get install libc6-dev
 
+#https://stackoverflow.com/questions/45498313/rails-assetsprecompile-yarn-executable-was-not-detected-in-the-system
+npm install yarn -g
+
 #https://askubuntu.com/questions/386265/media-change-please-insert-the-disc-labeled-when-trying-to-install-ruby-on-ra
 sudo sed -i '/cdrom/d' /etc/apt/sources.lists
 

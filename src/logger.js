@@ -1,6 +1,8 @@
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, label, printf } = format;
 require('winston-daily-rotate-file')
+const config = require('../application_properties.json')
+const isProd = config.environment === 'production'
 
 const myFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} ${level}: ${message}`; // Add back in if you want to name the logger: [${label}]
@@ -43,7 +45,7 @@ const logger = createLogger({
 // If we're not in production then **ALSO** log to the `console`
 // with the colorized simple format.
 // Make sure ENV Variable is set in PROD: vi ~/.bash_profile, then insert NODE_ENV=production
-if (process.env.NODE_ENV !== 'production') {
+if (!isProd) {
   logger.add(new transports.Console({
     format: format.combine(
       format.colorize(),

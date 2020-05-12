@@ -10,17 +10,19 @@ const sleep = require('sleep')
 const moment = require('moment')
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const config = require('./application_properties.json')
-
+const isProd = config.environment === 'production'
 
 const symbols = fs.readFileSync('./src/resources/watchlist.txt').toString().split("\n")
-const symbolsLength = process.env.NODE_ENV !== 'production' ? 1 : symbols.length
+const symbolsLength = isProd ? symbols.length : 1
 const OUTPUT_SHEET_ID = 0
 const OVERVIEW_SHEET_ID = 375661784
 
+
 async function fetchAndSave() {
+  logger.info(`Starting application.`)
   //logger.info(`Opening database.`)
   //const db = await EJDB2.open('optionchains.db', { truncate: false })
-  
+
   let outputArr = []
   for (let i = 0; i < symbolsLength; i++) {
     try {
@@ -36,8 +38,10 @@ async function fetchAndSave() {
 
       //let calls = json.options[0].calls
       let puts = filterPuts(json.options[0].puts, json)
+      let calls = filterCalls(json.options[0].calls, json)
       
       outputArr.push(...puts)
+      outputArr.push(...calls)
 
       sleep.msleep(1000)
     }
@@ -48,6 +52,8 @@ async function fetchAndSave() {
   await updateGoogleSheet(outputArr)
   //logger.info(`Closing database.`)
   //await db.close()
+
+  logger.info(`Shutting down application.`)
 }
 
 
@@ -148,31 +154,31 @@ async function updateGoogleSheet(optionsArr) {
       'marginPerContract' :  (((F('strike') * D(0.1)) + F('bid')) * sharesPerContract),
       'exposurePerContract' : (F('optionChain__stock__price') * sharesPerContract),
   } */
-function filterPuts(puts, json) {
+function filterPuts(options, json) {
   let stockPrice = json.quote.regularMarketPrice
   let belowStrike = stockPrice * 0.85
   let sharesPerContract = 100
 
-  let highPremiumPuts = []
-  for(let i = 0; i < puts.length; i++) {
-    let put = puts[i]
-    let putStrike = put.strike.raw
-    if(putStrike <= belowStrike) {
-      let lastPrice = put.lastPrice.raw
-      highPremiumPuts.push({
+  let filteredOptions = []
+  for(let i = 0; i < options.length; i++) {
+    let option = options[i]
+    let strike = option.strike.raw
+    if(strike <= belowStrike) {
+      let lastPrice = option.lastPrice.raw
+      filteredOptions.push({
         symbol : json.underlyingSymbol,
         stockPrice : stockPrice,
-        strike: putStrike,
-        expiry: put.expiration.fmt,
+        strike: strike,
+        expiry: option.expiration.fmt,
         type: 'PUT',
 
         lastPrice : lastPrice,
-        marginOfSafety : (stockPrice - putStrike) / stockPrice,
-        returnOnOption : lastPrice / ((putStrike * 0.1) + lastPrice),
-        marginPerContract : (((putStrike * 0.1) + lastPrice) * sharesPerContract),
-        exposurePerContract : (putStrike * sharesPerContract),
+        marginOfSafety : (stockPrice - strike) / stockPrice,
+        returnOnOption : lastPrice / ((strike * 0.1) + lastPrice),
+        marginPerContract : (((strike * 0.1) + lastPrice) * sharesPerContract),
+        exposurePerContract : (strike * sharesPerContract),
 
-        contractSymbol: put.contractSymbol,	
+        contractSymbol: option.contractSymbol,	
         earningsDate: formatUnixDate(json.quote.earningsTimestamp),
         dividendDate: formatUnixDate(json.quote.dividendDate),	
         fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange
@@ -180,14 +186,42 @@ function filterPuts(puts, json) {
 
     }
   }
-  return highPremiumPuts
+  return filteredOptions
 }
 
-function filterCalls(puts, price) {
-  let aboveStrike = price * 1.15
+function filterCalls(options, json) {
+  let stockPrice = json.quote.regularMarketPrice
+  let aboveStrike = stockPrice * 1.15
   let sharesPerContract = 100
 
+  let filteredOptions = []
+  for(let i = 0; i < options.length; i++) {
+    let option = options[i]
+    let strike = option.strike.raw
+    if(strike >= aboveStrike) {
+      let lastPrice = option.lastPrice.raw
+      filteredOptions.push({
+        symbol : json.underlyingSymbol,
+        stockPrice : stockPrice,
+        strike: strike,
+        expiry: option.expiration.fmt,
+        type: 'CALL',
 
+        lastPrice : lastPrice,
+        marginOfSafety : (strike - stockPrice) / stockPrice,
+        returnOnOption : lastPrice / ((strike * 0.1) + lastPrice),
+        marginPerContract : (((strike * 0.1) + lastPrice) * sharesPerContract),
+        exposurePerContract : (strike * sharesPerContract),
+
+        contractSymbol: option.contractSymbol,	
+        earningsDate: formatUnixDate(json.quote.earningsTimestamp),
+        dividendDate: formatUnixDate(json.quote.dividendDate),	
+        fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange
+      })
+
+    }
+  }
+  return filteredOptions
 }
 
 fetchAndSave()
