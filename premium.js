@@ -36,12 +36,21 @@ async function fetchAndSave() {
 
       //await db.put(key, json, today)
 
-      //let calls = json.options[0].calls
-      let puts = filterPuts(json.options[0].puts, json)
-      let calls = filterCalls(json.options[0].calls, json)
-      
-      outputArr.push(...puts)
-      outputArr.push(...calls)
+      if(json.options[0].puts) {
+        let puts = filterPuts(json.options[0].puts, json)
+        outputArr.push(...puts)
+      }
+      else {
+        logger.warn('No puts for: ' + symbols[i])
+      }
+
+      if(json.options[0].calls) {
+        let calls = filterCalls(json.options[0].calls, json)
+        outputArr.push(...calls)
+      }
+      else {
+        logger.warn('No calls for: ' + symbols[i])
+      }
 
       sleep.msleep(1000)
     }
@@ -49,6 +58,7 @@ async function fetchAndSave() {
       logger.error('Error: ' + e)
     }
   }
+
   await updateGoogleSheet(outputArr)
   //logger.info(`Closing database.`)
   //await db.close()
@@ -82,36 +92,26 @@ async function updateGoogleSheet(optionsArr) {
     logger.error(errMsg)
     throw new Error(errMsg)
   }
-
+  
   outputSheet.clear()
-
+  
+  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE', 'EXPIRY', 'TYPE', 'LAST PRICE', 'MARGIN OF SAFETY', 
+      'RETURN ON OPTION', 'EXPOSURE PER CONTRACT', 'CONTRACT', 'EARNINGS', 'DIVIDEND', '52 WEEK RANGE']
+  await outputSheet.setHeaderRow(headers)
 
   if(outputSheet.rowCount < optionsArr.length) {
-    let missingRowCount = (optionsArr.length - outputSheet.rowCount) + 1
+    let missingRowCount = optionsArr.length + 1
     logger.info('Adding ' + missingRowCount + ' rows.')
-    let emptyRowArray = [...Array(missingRowCount)].map(e => Array(0))
-    outputSheet.addRows(emptyRowArray)
+
+    var blankRow = {}
+    for(let i = 0; i < headers.length; i++)  blankRow[headers[i]] = ''
+
+    let emptyRowArray = [...Array(missingRowCount)].map(e => blankRow) 
+
+    await outputSheet.addRows(emptyRowArray, { raw : false, insert : false })
   }
 
   await outputSheet.loadCells('A1:N' + (optionsArr.length + 1)); // loads a range of cells
-
-  // PRINT HEADER
-  let colIndx = 0;
-  outputSheet.getCell(0, colIndx++).value = 'SYMBOL'
-  outputSheet.getCell(0, colIndx++).value = 'STOCK PRICE'
-  outputSheet.getCell(0, colIndx++).value = 'STRIKE'
-  outputSheet.getCell(0, colIndx++).value = 'EXPIRY'
-  outputSheet.getCell(0, colIndx++).value = 'TYPE'
-
-  outputSheet.getCell(0, colIndx++).value = 'LAST PRICE'
-  outputSheet.getCell(0, colIndx++).value = 'MARGIN OF SAFETY'
-  outputSheet.getCell(0, colIndx++).value = 'RETURN ON OPTION'
-  outputSheet.getCell(0, colIndx++).value = 'EXPOSURE PER CONTRACT'
-
-  outputSheet.getCell(0, colIndx++).value = 'CONTRACT'
-  outputSheet.getCell(0, colIndx++).value = 'EARNINGS'
-  outputSheet.getCell(0, colIndx++).value = 'DIVIDEND'
-  outputSheet.getCell(0, colIndx++).value = '52 WEEK RANGE'
 
   for(let i = 0; i < optionsArr.length; i++) {
     let option = optionsArr[i]
@@ -135,7 +135,6 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.fiftyTwoWeekRange
   }
   await outputSheet.saveUpdatedCells()
-
 
   
   const overviewSheet = doc.sheetsById[OVERVIEW_SHEET_ID];
