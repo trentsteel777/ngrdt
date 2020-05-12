@@ -133,8 +133,12 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.earningsDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.dividendDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.fiftyTwoWeekRange
+
+    // Save data at the end OR every 1000 records
+    if(i + 1 === optionsArr.length || i % 1000 === 0) {
+      await outputSheet.saveUpdatedCells()
+    }
   }
-  await outputSheet.saveUpdatedCells()
 
   
   const overviewSheet = doc.sheetsById[OVERVIEW_SHEET_ID];
