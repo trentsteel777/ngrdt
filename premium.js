@@ -58,7 +58,7 @@ async function fetchAndSave() {
       logger.error(e.message)
     }
   }
-
+  return
   await updateGoogleSheet(outputArr)
   //logger.info(`Closing database.`)
   //await db.close()
@@ -187,7 +187,7 @@ function filterPuts(options, json) {
     let option = options[i]
     let strike = option.strike.raw
     if(strike <= belowStrike) {
-      let bid = option.bid.raw
+      let bid = option.bid ? option.bid.raw : 0
       filteredOptions.push({
         symbol : json.underlyingSymbol,
         stockPrice : stockPrice,
@@ -199,7 +199,7 @@ function filterPuts(options, json) {
         bid: bid,
         ask: option.ask.raw,
         volume: option.volume ? option.volume.raw : 0,
-        openInterest: option.openInterest.raw,
+        openInterest: option.openInterest ? option.openInterest.raw : 0,
 
         marginOfSafety : (stockPrice - strike) / stockPrice,
         returnOnOption : bid / ((strike * 0.1) + bid),
@@ -228,7 +228,7 @@ function filterCalls(options, json) {
     let option = options[i]
     let strike = option.strike.raw
     if(strike >= aboveStrike) {
-      let bid = option.bid.raw
+      let bid = option.bid ? option.bid.raw : 0
       filteredOptions.push({
         symbol : json.underlyingSymbol,
         stockPrice : stockPrice,
@@ -240,7 +240,7 @@ function filterCalls(options, json) {
         bid: bid,
         ask: option.ask.raw,
         volume: option.volume ? option.volume.raw : 0,
-        openInterest: option.openInterest.raw,
+        openInterest: option.openInterest ? option.openInterest.raw : 0,
 
         marginOfSafety : (strike - stockPrice) / stockPrice,
         returnOnOption : bid / ((strike * 0.1) + bid),
