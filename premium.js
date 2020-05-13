@@ -58,7 +58,7 @@ async function fetchAndSave() {
       logger.error(e.message)
     }
   }
-  return
+ 
   await updateGoogleSheet(outputArr)
   //logger.info(`Closing database.`)
   //await db.close()
