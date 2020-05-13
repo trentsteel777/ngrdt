@@ -55,7 +55,7 @@ async function fetchAndSave() {
       sleep.msleep(1000)
     }
     catch (e) {
-      logger.error('Error: ' + e)
+      logger.error(e)
     }
   }
 
@@ -243,5 +243,5 @@ function filterCalls(options, json) {
 
 fetchAndSave()
   .catch(e => {
-    logger.error('Error: ' + e.message);
+    logger.error(e.message);
   })
