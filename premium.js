@@ -55,7 +55,7 @@ async function fetchAndSave() {
       sleep.msleep(1000)
     }
     catch (e) {
-      logger.error(e)
+      logger.error(e.message)
     }
   }
 
@@ -111,7 +111,7 @@ async function updateGoogleSheet(optionsArr) {
     await outputSheet.addRows(emptyRowArray, { raw : false, insert : false })
   }
 
-  await outputSheet.loadCells('A1:N' + (optionsArr.length + 1)); // loads a range of cells
+  await outputSheet.loadCells('A1:'+ columnToLetter(headers.length) + (optionsArr.length + 1)); // loads a range of cells
   const batchSize = 1000
   for(let i = 0; i < optionsArr.length; i++) {
     let option = optionsArr[i]
@@ -198,7 +198,7 @@ function filterPuts(options, json) {
         lastPrice : option.lastPrice.raw,
         bid: bid,
         ask: option.ask.raw,
-        volume: option.volume.raw,
+        volume: option.volume ? option.volume.raw : 0,
         openInterest: option.openInterest.raw,
 
         marginOfSafety : (stockPrice - strike) / stockPrice,
@@ -239,7 +239,7 @@ function filterCalls(options, json) {
         lastPrice : option.lastPrice.raw,
         bid: bid,
         ask: option.ask.raw,
-        volume: option.volume.raw,
+        volume: option.volume ? option.volume.raw : 0,
         openInterest: option.openInterest.raw,
 
         marginOfSafety : (strike - stockPrice) / stockPrice,
@@ -263,3 +263,24 @@ fetchAndSave()
   .catch(e => {
     logger.error(e.message);
   })
+
+// https://stackoverflow.com/questions/21229180/convert-column-index-into-corresponding-column-letter
+function columnToLetter(column) {
+  var temp, letter = '';
+  while (column > 0)
+  {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
+  }
+  return letter;
+}
+
+function letterToColumn(letter) {
+  var column = 0, length = letter.length;
+  for (var i = 0; i < length; i++)
+  {
+    column += (letter.charCodeAt(i) - 64) * Math.pow(26, length - i - 1);
+  }
+  return column;
+}
