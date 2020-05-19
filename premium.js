@@ -96,7 +96,7 @@ async function updateGoogleSheet(optionsArr) {
   await outputSheet.clear()
   
   let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE', 'EXPIRY', 'TYPE', 'LAST PRICE', 'BID', 'ASK', 'VOLUME', 'OPEN INTEREST', 'MARGIN OF SAFETY', 
-      'RETURN ON OPTION', 'EXPOSURE PER CONTRACT', 'RETURN ON CAPITAL','CONTRACT', 'EARNINGS', 'DIVIDEND', '52 WEEK RANGE']
+      'RETURN ON OPTION', 'EXPOSURE PER CONTRACT', 'RETURN ON CAPITAL','CONTRACT', 'EARNINGS', 'DIVIDEND', '52 WEEK RANGE', 'EXCHANGE']
   await outputSheet.setHeaderRow(headers)
 
   if(outputSheet.rowCount < optionsArr.length) {
@@ -139,6 +139,7 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.earningsDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.dividendDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.fiftyTwoWeekRange
+    outputSheet.getCell(cellIndx, colIndx++).value = option.exchange
 
     if(i + 1 === optionsArr.length) {
       logger.info('POSTing final data to spreadsheet.')
@@ -188,30 +189,34 @@ function filterPuts(options, json) {
     let strike = option.strike.raw
     if(strike <= belowStrike) {
       let bid = option.bid ? option.bid.raw : 0
-      filteredOptions.push({
-        symbol : json.underlyingSymbol,
-        stockPrice : stockPrice,
-        strike: strike,
-        expiry: option.expiration.fmt,
-        type: 'PUT',
-
-        lastPrice : option.lastPrice.raw,
-        bid: bid,
-        ask: option.ask.raw,
-        volume: option.volume ? option.volume.raw : 0,
-        openInterest: option.openInterest ? option.openInterest.raw : 0,
-
-        marginOfSafety : (stockPrice - strike) / stockPrice,
-        returnOnOption : bid / ((strike * 0.1) + bid),
-        marginPerContract : (((strike * 0.1) + bid) * sharesPerContract),
-        exposurePerContract : (strike * sharesPerContract),
-        returnOnCapital: bid / stockPrice,
-
-        contractSymbol: option.contractSymbol,	
-        earningsDate: formatUnixDate(json.quote.earningsTimestamp),
-        dividendDate: formatUnixDate(json.quote.dividendDate),	
-        fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange
-      })
+      let returnOnCapital = bid / stockPrice
+      if(returnOnCapital >= 0.01) {
+        filteredOptions.push({
+          symbol : json.underlyingSymbol,
+          stockPrice : stockPrice,
+          strike: strike,
+          expiry: option.expiration.fmt,
+          type: 'PUT',
+  
+          lastPrice : option.lastPrice.raw,
+          bid: bid,
+          ask: option.ask.raw,
+          volume: option.volume ? option.volume.raw : 0,
+          openInterest: option.openInterest ? option.openInterest.raw : 0,
+  
+          marginOfSafety : (stockPrice - strike) / stockPrice,
+          returnOnOption : bid / ((strike * 0.1) + bid),
+          marginPerContract : (((strike * 0.1) + bid) * sharesPerContract),
+          exposurePerContract : (strike * sharesPerContract),
+          returnOnCapital: returnOnCapital,
+  
+          contractSymbol: option.contractSymbol,	
+          earningsDate: formatUnixDate(json.quote.earningsTimestamp),
+          dividendDate: formatUnixDate(json.quote.dividendDate),	
+          fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange,
+          exchange: json.quote.fullExchangeName
+        })
+      }
 
     }
   }
@@ -229,30 +234,34 @@ function filterCalls(options, json) {
     let strike = option.strike.raw
     if(strike >= aboveStrike) {
       let bid = option.bid ? option.bid.raw : 0
-      filteredOptions.push({
-        symbol : json.underlyingSymbol,
-        stockPrice : stockPrice,
-        strike: strike,
-        expiry: option.expiration.fmt,
-        type: 'CALL',
-
-        lastPrice : option.lastPrice.raw,
-        bid: bid,
-        ask: option.ask.raw,
-        volume: option.volume ? option.volume.raw : 0,
-        openInterest: option.openInterest ? option.openInterest.raw : 0,
-
-        marginOfSafety : (strike - stockPrice) / stockPrice,
-        returnOnOption : bid / ((strike * 0.1) + bid),
-        marginPerContract : (((strike * 0.1) + bid) * sharesPerContract),
-        exposurePerContract : (strike * sharesPerContract),
-        returnOnCapital: bid / stockPrice,
-
-        contractSymbol: option.contractSymbol,	
-        earningsDate: formatUnixDate(json.quote.earningsTimestamp),
-        dividendDate: formatUnixDate(json.quote.dividendDate),	
-        fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange
-      })
+      let returnOnCapital = bid / stockPrice
+      if(returnOnCapital >= 0.01) {
+        filteredOptions.push({
+          symbol : json.underlyingSymbol,
+          stockPrice : stockPrice,
+          strike: strike,
+          expiry: option.expiration.fmt,
+          type: 'CALL',
+  
+          lastPrice : option.lastPrice.raw,
+          bid: bid,
+          ask: option.ask.raw,
+          volume: option.volume ? option.volume.raw : 0,
+          openInterest: option.openInterest ? option.openInterest.raw : 0,
+  
+          marginOfSafety : (strike - stockPrice) / stockPrice,
+          returnOnOption : bid / ((strike * 0.1) + bid),
+          marginPerContract : (((strike * 0.1) + bid) * sharesPerContract),
+          exposurePerContract : (strike * sharesPerContract),
+          returnOnCapital: returnOnCapital,
+  
+          contractSymbol: option.contractSymbol,	
+          earningsDate: formatUnixDate(json.quote.earningsTimestamp),
+          dividendDate: formatUnixDate(json.quote.dividendDate),	
+          fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange,
+          exchange: json.quote.fullExchangeName
+        })
+      }
 
     }
   }
