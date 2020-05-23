@@ -414,7 +414,7 @@ function filterCalls(options, json) {
 
 fetchAndSave()
   .catch(e => {
-    logger.error(e.message);
+    logger.error('fetchAndSave: ' + e.message);
   })
 
 // https://stackoverflow.com/questions/21229180/convert-column-index-into-corresponding-column-letter
