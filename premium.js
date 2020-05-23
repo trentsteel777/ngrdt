@@ -67,13 +67,13 @@ async function fetchAndSave() {
           let callAvgReturn = (calls.reduce(ADD_REDUCER, 0) / calls.length).toFixed(2)
           let putAvgReturn = (puts.reduce(ADD_REDUCER, 0) / puts.length).toFixed(2)
   
-          sleep.msleep(350)
+          sleep.msleep(100)
           let summaryProfileUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
           logger.info(`{${summaryProfileUrl}}`)
           let summaryProfileResponse = await axios.get(summaryProfileUrl)
           let summaryProfile = summaryProfileResponse.data.quoteSummary.result[0].summaryProfile
   
-          sleep.msleep(350)
+          sleep.msleep(100)
           let defaultKeyStatisticsUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=defaultKeyStatistics`
           logger.info(`{${defaultKeyStatisticsUrl}}`)
           let defaultKeyStatisticsResponse = await axios.get(defaultKeyStatisticsUrl)
@@ -124,7 +124,7 @@ async function fetchAndSave() {
         }
       }
 
-      sleep.msleep(350)
+      sleep.msleep(1000)
     }
     catch (e) {
       logger.error(symbol + ': ' + e.message)
