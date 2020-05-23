@@ -67,16 +67,30 @@ async function fetchAndSave() {
           let callAvgReturn = (calls.reduce(ADD_REDUCER, 0) / calls.length).toFixed(2)
           let putAvgReturn = (puts.reduce(ADD_REDUCER, 0) / puts.length).toFixed(2)
   
+          sleep.msleep(350)
           let summaryProfileUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
           logger.info(`{${summaryProfileUrl}}`)
           let summaryProfileResponse = await axios.get(summaryProfileUrl)
           let summaryProfile = summaryProfileResponse.data.quoteSummary.result[0].summaryProfile
   
+          sleep.msleep(350)
           let defaultKeyStatisticsUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=defaultKeyStatistics`
           logger.info(`{${defaultKeyStatisticsUrl}}`)
           let defaultKeyStatisticsResponse = await axios.get(defaultKeyStatisticsUrl)
-          let defaultKeyStatistics = defaultKeyStatisticsResponse.data.quoteSummary.result[0].defaultKeyStatistics
-  
+          
+          let beta = '';
+          if(defaultKeyStatisticsResponse.data.quoteSummary.result) {
+            let defaultKeyStatistics = defaultKeyStatisticsResponse.data.quoteSummary.result[0].defaultKeyStatistics
+            
+            if(defaultKeyStatistics.beta) {
+              beta = defaultKeyStatistics.beta.raw
+            }
+            else if(defaultKeyStatistics.beta3Year) {
+              beta = defaultKeyStatistics.beta3Year.raw
+            }
+
+          }
+
           let stockPrice = json.quote.regularMarketPrice
           let watchlistRecord = {
             symbol: symbol,
@@ -88,7 +102,7 @@ async function fetchAndSave() {
   
             marketcap: json.quote.marketCap,
   
-            beta: defaultKeyStatistics.beta.raw,
+            beta: beta,
   
             pe: stockPrice / json.quote.epsTrailingTwelveMonths,
             eps: json.quote.epsTrailingTwelveMonths,
@@ -110,7 +124,7 @@ async function fetchAndSave() {
         }
       }
 
-      sleep.msleep(1000)
+      sleep.msleep(350)
     }
     catch (e) {
       logger.error(symbol + ': ' + e.message)
