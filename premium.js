@@ -64,9 +64,14 @@ async function fetchAndSave() {
         try {
           logger.info(`Adding ${symbol} to watchlist.`)
   
-          let callAvgReturn = (calls.reduce(ADD_REDUCER, 0) / calls.length).toFixed(2)
-          let putAvgReturn = (puts.reduce(ADD_REDUCER, 0) / puts.length).toFixed(2)
-  
+          let callAvgReturn = 0
+          if(calls.length) {
+            callAvgReturn = (calls.reduce(ADD_REDUCER, 0) / calls.length).toFixed(2)
+          }
+          let putAvgReturn = 0
+          if(puts.length) {
+            putAvgReturn = (puts.reduce(ADD_REDUCER, 0) / puts.length).toFixed(2)
+          }
           sleep.msleep(100)
           let summaryProfileUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
           logger.info(`{${summaryProfileUrl}}`)
@@ -104,7 +109,7 @@ async function fetchAndSave() {
   
             beta: beta,
   
-            pe: stockPrice / json.quote.epsTrailingTwelveMonths,
+            pe: json.quote.epsTrailingTwelveMonths ? stockPrice / json.quote.epsTrailingTwelveMonths : 'N/A',
             eps: json.quote.epsTrailingTwelveMonths,
             volume: json.quote.regularMarketVolume,
             avgVolume: json.quote.averageDailyVolume3Month,
@@ -112,8 +117,8 @@ async function fetchAndSave() {
             callReturn: callAvgReturn,
             putReturn: putAvgReturn,
   
-            earningsDate: formatUnixDate(json.quote.earningsTimestamp),
-            dividendDate: formatUnixDate(json.quote.dividendDate),
+            earningsDate: json.quote.earningsTimestamp ? formatUnixDate(json.quote.earningsTimestamp) : 'UNKNOWN',
+            dividendDate: json.quote.dividendDate ? formatUnixDate(json.quote.dividendDate) : 'UNKNOWN',
             fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange,
             exchange: json.quote.exchange,
           }
@@ -272,42 +277,48 @@ async function updateGoogleSheet(optionsArr, watchlistRecords) {
   await watchlistSheet.loadCells('A1:'+ columnToLetter(watchlistHeaders.length) + (watchlistRecords.length + 1)); // loads a range of cells
   for(let i = 0; i < watchlistRecords.length; i++) {
     let watchlistRecord = watchlistRecords[i]
-    let cellIndx = i + 1
+    try {
+      let cellIndx = i + 1
+  
+      let colIndx = 0;
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.symbol
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.stockPrice
+  
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.sector
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.industry
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.employees
+  
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.marketcap
+  
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.beta
+  
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.pe
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.eps
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.volume
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.avgVolume
+  
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.callReturn
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.putReturn
+  
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.earningsDate
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.dividendDate
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.fiftyTwoWeekRange
+      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.exchange
+  
+      if(i + 1 === watchlistRecords.length) {
+        logger.info('POSTing final data to WATCHLIST spreadsheet.')
+        await watchlistSheet.saveUpdatedCells()
+      }
+      else if(i !== 0 && i % BATCH_SIZE === 0) {
+        let num = parseInt(i / BATCH_SIZE)
+        let lastBatch = parseInt(watchlistRecords.length / BATCH_SIZE)
+        logger.info(`POSTing batch ${num} of ${lastBatch} to WATCHLIST spreadsheet.`)
+        await watchlistSheet.saveUpdatedCells()
+      }
 
-    let colIndx = 0;
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.symbol
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.stockPrice
-
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.sector
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.industry
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.employees
-
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.marketcap
-
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.beta
-
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.pe
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.eps
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.volume
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.avgVolume
-
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.callReturn
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.putReturn
-
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.earningsDate
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.dividendDate
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.fiftyTwoWeekRange
-    watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.exchange
-
-    if(i + 1 === watchlistRecords.length) {
-      logger.info('POSTing final data to WATCHLIST spreadsheet.')
-      await watchlistSheet.saveUpdatedCells()
     }
-    else if(i !== 0 && i % BATCH_SIZE === 0) {
-      let num = parseInt(i / BATCH_SIZE)
-      let lastBatch = parseInt(watchlistRecords.length / BATCH_SIZE)
-      logger.info(`POSTing batch ${num} of ${lastBatch} to WATCHLIST spreadsheet.`)
-      await watchlistSheet.saveUpdatedCells()
+    catch(e) {
+      logger.error(`Attempting to write ${watchlistRecord.symbol} record to WATCHLIST spreedsheet: ` + e.message)
     }
   }
 
@@ -355,8 +366,8 @@ function filterPuts(options, json) {
           returnOnCapital: returnOnCapital,
   
           contractSymbol: option.contractSymbol,	
-          earningsDate: formatUnixDate(json.quote.earningsTimestamp),
-          dividendDate: formatUnixDate(json.quote.dividendDate),	
+          earningsDate: json.quote.earningsTimestamp ? formatUnixDate(json.quote.earningsTimestamp) : 'UNKNOWN',
+          dividendDate: json.quote.dividendDate ? formatUnixDate(json.quote.dividendDate) : 'UNKNOWN',	
           fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange,
           exchange: json.quote.fullExchangeName
         })
@@ -400,8 +411,8 @@ function filterCalls(options, json) {
           returnOnCapital: returnOnCapital,
   
           contractSymbol: option.contractSymbol,	
-          earningsDate: formatUnixDate(json.quote.earningsTimestamp),
-          dividendDate: formatUnixDate(json.quote.dividendDate),	
+          earningsDate: json.quote.earningsTimestamp ? formatUnixDate(json.quote.earningsTimestamp) : 'UNKNOWN',
+          dividendDate: json.quote.dividendDate ? formatUnixDate(json.quote.dividendDate) : 'UNKNOWN',	
           fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange,
           exchange: json.quote.fullExchangeName
         })
