@@ -18,7 +18,7 @@ const OUTPUT_SHEET_ID = 0
 const OVERVIEW_SHEET_ID = 375661784
 const WATCHLIST_SHEET_ID = 596817924
 
-const TARGET_RETURN = (option) => option.returnOnCapital <= 0.12 && option.returnOnCapital >= 0.08
+const TARGET_RETURN = (option) => option.returnOnCapital <= 0.12 && option.returnOnCapital >= 0.08 && option.openInterest >= 100
 const ADD_REDUCER = (accumulator, option) => accumulator + option.returnOnCapital
 
 const BATCH_SIZE = 1000
