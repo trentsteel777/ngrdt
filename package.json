@@ -4,7 +4,7 @@
   "description": "Command-line application to find the populations of a list of countries passed as an argument.",
   "main": "premium.js",
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.21.1",
     "chalk": "^2.4.2",
     "cli-table": "^0.3.1",
     "ejdb2_node": "^1.0.33",
