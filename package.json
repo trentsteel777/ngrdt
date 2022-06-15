@@ -10,7 +10,7 @@
     "ejdb2_node": "^1.0.33",
     "google-spreadsheet": "^3.0.11",
     "googleapis": "^50.0.0",
-    "moment": "^2.25.1",
+    "moment": "^2.29.2",
     "sleep": "^6.1.0",
     "winston": "^3.2.1",
     "winston-daily-rotate-file": "^4.4.2",
