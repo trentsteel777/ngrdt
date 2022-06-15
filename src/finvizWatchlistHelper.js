@@ -1,28 +1,66 @@
+#!/usr/bin/env node
+'use strict'
+
 /*
-    This script prints all optionable symbols in North America using finviz website.
+  This is a node helper application to retrieve optionable stocks from finviz.
 
-    Open up the developer console in Google Chrome.
-    GOTO: https://finviz.com/screener.ashx?v=111&f=sh_opt_option&ft=4&r=1
-    GOTO sources tab in the developer console, and create a new snippet in the top left side section.
-    Paste and save the code below, right click the file you have saved it in and select run.
+  Usage: From Linux / Odroid Run: node finvizWatchlistHelper.js
 
-    All the optionable symbols should be printed in the developer console and can be copied and pasted into your watchlist.
+  Watchlist requests run synchronously and appear in log/watchlist.log
+
+  Copy and paste them into watchlist.txt after this helper program finishes
 */
-function reqListener () {
+const sleep = require('sleep')
+var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+const { createLogger, format, transports } = require('winston');
+const { combine, timestamp, label, printf } = format;
+const fs = require('fs')
+
+const logDir = 'logs/';
+const logFileName = 'watchlist.log';
+
+fs.writeFile(logDir + logFileName, '', () => {}) // clear watchlist file
+
+const myFormat = printf(({ level, message, label, timestamp }) => {
+  return `${message}`; // Just log the SYMBOL
+});
+
+const logger = createLogger({
+  level: 'info',
+  format: format.combine(
+    myFormat
+  ),
+  transports: [
+    new (transports.File)({
+      level: 'info',
+      filename: logFileName,
+      dirname: logDir
+    })
+  ]
+});
+
+
+function reqListener() {
     var pattern = /(screener-link-primary">)([^<\/a>]+)(<\/a>)/g;
     var match;    
-  
+
     while (match = pattern.exec(this.responseText)) {
-        console.log(match[2]);
+      logger.info(match[2]);
     }
-  }
-  let start = 1
-  let increment = 21
-  let end = 4141
-  for(let i = start; i <= end; i = i + 20) {
-    var oReq = new XMLHttpRequest();
-    oReq.addEventListener("load", reqListener);
-    oReq.open("GET", "https://finviz.com/screener.ashx?v=111&f=sh_opt_option&ft=4&r=" + i);
-    oReq.send();
-  }
-  
+}
+console.log("Starting application");
+
+let start = 1
+let increment = 21
+let end = 5621
+for(let i = start; i <= end; i = i + 20) {
+  var url = "https://finviz.com/screener.ashx?v=111&f=sh_opt_option&ft=4&r=" + i;
+  console.log(url);
+  var oReq = new XMLHttpRequest();
+  oReq.addEventListener("load", reqListener);
+  oReq.open("GET", url, false);  
+  oReq.send();
+  //sleep.msleep(1000)
+}
+
+console.log("Ending application");
