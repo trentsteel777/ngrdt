@@ -110,8 +110,10 @@ async function updateGoogleSheet(optionsArr) {
   
   await outputSheet.clear()
   
-  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE', 'EXPIRY', 'TYPE', 'LAST PRICE', 'BID', 'ASK', 'VOLUME', 'OPEN INTEREST', 'MARGIN OF SAFETY', 
-      'RETURN ON OPTION', 'EXPOSURE PER CONTRACT', 'RETURN ON CAPITAL','CONTRACT', 'EARNINGS', 'DIVIDEND', '52 WEEK RANGE', 'EXCHANGE']
+  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE',  'TYPE', 'LAST PRICE',  'OPEN INTEREST', 
+       'EXPOSURE PER CONTRACT', 'RETURN ON CAPITAL', 'SECTOR', 'INDUSTRY', '52 WEEK RANGE',
+       'MARGIN OF SAFETY', 'RETURN ON OPTION', 'CONTRACT', 'EARNINGS', 
+      'DIVIDEND', 'EXCHANGE', 'BID', 'ASK', 'VOLUME', 'EXPIRY']
   await outputSheet.setHeaderRow(headers)
 
   if(outputSheet.rowCount < optionsArr.length) {
@@ -135,25 +137,30 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.symbol
     outputSheet.getCell(cellIndx, colIndx++).value = option.stockPrice
     outputSheet.getCell(cellIndx, colIndx++).value = option.strike
-    outputSheet.getCell(cellIndx, colIndx++).value = option.expiry
     outputSheet.getCell(cellIndx, colIndx++).value = option.type
-
+    
     outputSheet.getCell(cellIndx, colIndx++).value = option.lastPrice
-    outputSheet.getCell(cellIndx, colIndx++).value = option.bid
-    outputSheet.getCell(cellIndx, colIndx++).value = option.ask
-    outputSheet.getCell(cellIndx, colIndx++).value = option.volume
     outputSheet.getCell(cellIndx, colIndx++).value = option.openInterest
-
-    outputSheet.getCell(cellIndx, colIndx++).value = option.marginOfSafety
-    outputSheet.getCell(cellIndx, colIndx++).value = option.returnOnOption
+    
     outputSheet.getCell(cellIndx, colIndx++).value = option.exposurePerContract
     outputSheet.getCell(cellIndx, colIndx++).value = option.returnOnCapital
-
+    
+    outputSheet.getCell(cellIndx, colIndx++).value = option.sector
+    outputSheet.getCell(cellIndx, colIndx++).value = option.industry
+    
+    outputSheet.getCell(cellIndx, colIndx++).value = option.fiftyTwoWeekRange
+    
+    outputSheet.getCell(cellIndx, colIndx++).value = option.marginOfSafety
+    outputSheet.getCell(cellIndx, colIndx++).value = option.returnOnOption
     outputSheet.getCell(cellIndx, colIndx++).value = option.contractSymbol
     outputSheet.getCell(cellIndx, colIndx++).value = option.earningsDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.dividendDate
-    outputSheet.getCell(cellIndx, colIndx++).value = option.fiftyTwoWeekRange
     outputSheet.getCell(cellIndx, colIndx++).value = option.exchange
+
+    outputSheet.getCell(cellIndx, colIndx++).value = option.bid
+    outputSheet.getCell(cellIndx, colIndx++).value = option.ask
+    outputSheet.getCell(cellIndx, colIndx++).value = option.volume
+    outputSheet.getCell(cellIndx, colIndx++).value = option.expiry
 
     if(i + 1 === optionsArr.length) {
       logger.info('POSTing final data to OUTPUT spreadsheet.')
