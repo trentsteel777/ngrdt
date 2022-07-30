@@ -3,24 +3,24 @@
 
 const fs = require('fs')
 const axios = require('axios')
-const { EJDB2 } = require('ejdb2_node')
+//const { EJDB2 } = require('ejdb2_node')
 const { thirdFridayOfNextMonth, today, formatUnixDate } = require('./src/utils.js')
 const { logger } = require('./src/logger.js')
 const sleep = require('sleep')
 const moment = require('moment')
 const { GoogleSpreadsheet } = require('google-spreadsheet');
+const xpath = require('xpath')
+const dom = require('xmldom').DOMParser
+
+
 const config = require('./application_properties.json')
 const isProd = config.environment === 'production'
 
 const symbols = fs.readFileSync('./src/resources/watchlist.txt').toString().split("\n")
-const symbolsLength = isProd ? symbols.length : 1
+const symbolsLength = isProd ? symbols.length : 10
 const OUTPUT_SHEET_ID = 0
 const OVERVIEW_SHEET_ID = 375661784
-const WATCHLIST_SHEET_ID = 596817924
-
-const TARGET_RETURN = (option) => option.returnOnCapital <= 0.12 && option.returnOnCapital >= 0.08 && option.openInterest >= 100
-const ADD_REDUCER = (accumulator, option) => accumulator + option.returnOnCapital
-
+const SECTORS_FILE_LOC = './src/resources/sectors.txt'
 const BATCH_SIZE = 1000
 
 async function fetchAndSave() {
@@ -29,18 +29,15 @@ async function fetchAndSave() {
   //const db = await EJDB2.open('optionchains.db', { truncate: false })
 
   let outputArr = []
-  let watchlistRecords = []
   var symbol = null;
   for (let i = 0; i < symbolsLength; i++) {
     try {
-      symbol = symbols[i]
+      symbol = symbols[i].trim()
       let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbol}?formatted=true&lang=en-US&region=US&date=${thirdFridayOfNextMonth}`
       
       logger.info(`{${apiUrl}}`)
       let response = await axios.get(apiUrl)
-      
       let json = response.data.optionChain.result[0]
-      
       //await db.put(symbol, json, today)
       let puts = []
       if(json.options[0].puts) {
@@ -57,77 +54,7 @@ async function fetchAndSave() {
       }
       else {
         logger.warn('No calls for: ' + symbol)
-      }
-      
-      
-      if(calls.some(TARGET_RETURN) || puts.some(TARGET_RETURN)) {
-        try {
-          logger.info(`Adding ${symbol} to watchlist.`)
-  
-          let callAvgReturn = 0
-          if(calls.length) {
-            callAvgReturn = (calls.reduce(ADD_REDUCER, 0) / calls.length).toFixed(2)
-          }
-          let putAvgReturn = 0
-          if(puts.length) {
-            putAvgReturn = (puts.reduce(ADD_REDUCER, 0) / puts.length).toFixed(2)
-          }
-          sleep.msleep(100)
-          let summaryProfileUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
-          logger.info(`{${summaryProfileUrl}}`)
-          let summaryProfileResponse = await axios.get(summaryProfileUrl)
-          let summaryProfile = summaryProfileResponse.data.quoteSummary.result[0].summaryProfile
-  
-          sleep.msleep(100)
-          let defaultKeyStatisticsUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=defaultKeyStatistics`
-          logger.info(`{${defaultKeyStatisticsUrl}}`)
-          let defaultKeyStatisticsResponse = await axios.get(defaultKeyStatisticsUrl)
-          
-          let beta = '';
-          if(defaultKeyStatisticsResponse.data.quoteSummary.result) {
-            let defaultKeyStatistics = defaultKeyStatisticsResponse.data.quoteSummary.result[0].defaultKeyStatistics
-            
-            if(defaultKeyStatistics.beta) {
-              beta = defaultKeyStatistics.beta.raw
-            }
-            else if(defaultKeyStatistics.beta3Year) {
-              beta = defaultKeyStatistics.beta3Year.raw
-            }
-
-          }
-
-          let stockPrice = json.quote.regularMarketPrice
-          let watchlistRecord = {
-            symbol: symbol,
-            stockPrice: stockPrice,
-  
-            sector: summaryProfile.sector,
-            industry: summaryProfile.industry,
-            employees: summaryProfile.fullTimeEmployees,
-  
-            marketcap: json.quote.marketCap,
-  
-            beta: beta,
-  
-            pe: json.quote.epsTrailingTwelveMonths ? stockPrice / json.quote.epsTrailingTwelveMonths : 'N/A',
-            eps: json.quote.epsTrailingTwelveMonths,
-            volume: json.quote.regularMarketVolume,
-            avgVolume: json.quote.averageDailyVolume3Month,
-  
-            callReturn: callAvgReturn,
-            putReturn: putAvgReturn,
-  
-            earningsDate: json.quote.earningsTimestamp ? formatUnixDate(json.quote.earningsTimestamp) : 'UNKNOWN',
-            dividendDate: json.quote.dividendDate ? formatUnixDate(json.quote.dividendDate) : 'UNKNOWN',
-            fiftyTwoWeekRange: json.quote.fiftyTwoWeekRange,
-            exchange: json.quote.exchange,
-          }
-          watchlistRecords.push(watchlistRecord)
-        }
-        catch(e) {
-          logger.error(`Failed adding ${symbol} to watchlist. ` + e.message)
-        }
-      }
+      }   
 
       sleep.msleep(1000)
     }
@@ -136,19 +63,30 @@ async function fetchAndSave() {
     }
   }
  
-  await updateGoogleSheet(outputArr, watchlistRecords)
+  let sectorInfoMap = getSectorInfoMap()
+  for(var i = 0; i < outputArr.length; i++) {
+    let option = optionsArr[i]
+    let symbol = option.symbol
+    let sectorInfo = sectorInfoMap[symbol]
+    if(!sectorInfo) {
+      sectorInfo = addSectorInfoToFile(symbol)
+    }
+    option.sector = sectorInfo.sector
+    option.industry = sectorInfo.industry
+  }
+
+  await updateGoogleSheet(outputArr)
   //logger.info(`Closing database.`)
   //await db.close()
 
   logger.info(`Shutting down application.`)
 }
 
-
 // https://codelabs.developers.google.com/codelabs/sheets-api/#5
 // https://console.developers.google.com/apis/credentials/wizard?api=sheets.googleapis.com&project=findpremiums
 // https://www.fastcomet.com/tutorials/nodejs/google-spreadsheet-package
 // https://www.npmjs.com/package/google-spreadsheet
-async function updateGoogleSheet(optionsArr, watchlistRecords) {
+async function updateGoogleSheet(optionsArr) {
 
   // spreadsheet key is the long id in the sheets URL
   const doc = new GoogleSpreadsheet(config.googleSheetId);
@@ -246,83 +184,6 @@ async function updateGoogleSheet(optionsArr, watchlistRecords) {
     await overviewSheet.saveUpdatedCells()
   }
 
-  // UPDATE WATCHLIST SHEET
-
-  const watchlistSheet = doc.sheetsById[WATCHLIST_SHEET_ID];
-
-  if(!watchlistSheet) {
-    let errMsg = 'Could not find WATCHLIST sheet'
-    logger.error(errMsg)
-    throw new Error(errMsg)
-  }
-  
-  await watchlistSheet.clear()
-  
-  let watchlistHeaders = ['SYMBOL', 'STOCK PRICE', 'SECTOR', 'INDUSTRY', 'EMPLOYEES', 'MARKET CAP', 'BETA', 'PE', 'EPS', 'VOLUME',
-                  'AVG. VOLUME', 'CALL RETURN', 'PUT RETURN', 'EARNINGS', 'DIVIDEND', '52 WEEK RANGE', 'EXCHANGE']
-  await watchlistSheet.setHeaderRow(watchlistHeaders)
-
-  if(watchlistSheet.rowCount < watchlistRecords.length) {
-    let missingRowCount = watchlistRecords.length + 1
-    logger.info('Creating ' + missingRowCount + ' rows in WATCHLIST sheet.')
-
-    var blankRow = {}
-    for(let i = 0; i < watchlistHeaders.length; i++)  blankRow[watchlistHeaders[i]] = ''
-
-    let emptyRowArray = [...Array(missingRowCount)].map(e => blankRow) 
-
-    await watchlistSheet.addRows(emptyRowArray, { raw : false, insert : false })
-  }
-
-  await watchlistSheet.loadCells('A1:'+ columnToLetter(watchlistHeaders.length) + (watchlistRecords.length + 1)); // loads a range of cells
-  for(let i = 0; i < watchlistRecords.length; i++) {
-    let watchlistRecord = watchlistRecords[i]
-    try {
-      let cellIndx = i + 1
-  
-      let colIndx = 0;
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.symbol
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.stockPrice
-  
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.sector
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.industry
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.employees
-  
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.marketcap
-  
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.beta
-  
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.pe
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.eps
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.volume
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.avgVolume
-  
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.callReturn
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.putReturn
-  
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.earningsDate
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.dividendDate
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.fiftyTwoWeekRange
-      watchlistSheet.getCell(cellIndx, colIndx++).value = watchlistRecord.exchange
-  
-      if(i + 1 === watchlistRecords.length) {
-        logger.info('POSTing final data to WATCHLIST spreadsheet.')
-        await watchlistSheet.saveUpdatedCells()
-      }
-      else if(i !== 0 && i % BATCH_SIZE === 0) {
-        let num = parseInt(i / BATCH_SIZE)
-        let lastBatch = parseInt(watchlistRecords.length / BATCH_SIZE)
-        logger.info(`POSTing batch ${num} of ${lastBatch} to WATCHLIST spreadsheet.`)
-        await watchlistSheet.saveUpdatedCells()
-      }
-
-    }
-    catch(e) {
-      logger.error(`Attempting to write ${watchlistRecord.symbol} record to WATCHLIST spreedsheet: ` + e.message)
-    }
-  }
-
-  
 }
 
 /*
@@ -440,11 +301,51 @@ function columnToLetter(column) {
   return letter;
 }
 
-function letterToColumn(letter) {
-  var column = 0, length = letter.length;
-  for (var i = 0; i < length; i++)
-  {
-    column += (letter.charCodeAt(i) - 64) * Math.pow(26, length - i - 1);
+function getSectorInfoMap() {
+  let sectorInfoMap = {}
+  const sectors = fs.readFileSync(SECTORS_FILE_LOC).toString().split("\n")
+  for(let i = 0; i < sectors.length; i++) {
+    let sectorInfoArray = sectors[i].trim().split(",")
+    let symbol = sectorInfoArray[0]
+    let sector = sectorInfoArray[1]
+    let industry = sectorInfoArray[2]
+
+    sectorInfoMap[symbol] = {
+      sector: sector,
+      industry: industry
+    }
+
+    //console.log(symbol + " : " + sectorInfoMap[symbol])
   }
-  return column;
+  return sectorInfoMap
+}
+
+function addSectorInfoToFile(symbol) {
+  let sector = ""
+  let industry = ""
+  let yahooProfileUrl=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
+  logger.info(`{${yahooProfileUrl}}`)
+  let profileResponse = await axios.get(yahooProfileUrl)
+  let summaryProfile	= profileResponse.data.quoteSummary.result[0].summaryProfile
+  if(summaryProfile.sector && summaryProfile.industry) {
+    sector = summaryProfile.sector.trim()
+    industry = summaryProfile.industry.trim()
+  }
+  else {
+    // FINVIZ
+    let finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}&ty=c&ta=1&p=d`
+    logger.info(`{${finvizUrl}}`)
+    let finvizResponse = await axios.get(finvizUrl)
+    let doc = new dom().parseFromString(finvizResponse.data)
+    let nodes = xpath.select("//table[@class='fullview-title']//tr[3]", doc)
+    let finvizInfoArr = nodes[0].firstChild.textContent.split("|")
+    sector = finvizInfoArr[0].trim()
+    industry = finvizInfoArr[1].trim()
+  }
+  let line = `${symbol},${sector},${industry}`
+  fs.writeFile(SECTORS_FILE_LOC, line)
+  return {
+    sector:sector,
+    industry:industry
+  }
 }

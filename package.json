@@ -7,14 +7,15 @@
     "axios": "^0.18.0",
     "chalk": "^2.4.2",
     "cli-table": "^0.3.1",
-    "ejdb2_node": "^1.0.33",
     "google-spreadsheet": "^3.0.11",
     "googleapis": "^50.0.0",
     "moment": "^2.25.1",
-    "sleep": "^6.1.0",
+    "sleep": "^6.3.0",
     "winston": "^3.2.1",
     "winston-daily-rotate-file": "^4.4.2",
-    "xmlhttprequest": "^1.8.0"
+    "xmldom": "^0.6.0",
+    "xmlhttprequest": "^1.8.0",
+    "xpath": "0.0.32"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
