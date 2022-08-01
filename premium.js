@@ -113,9 +113,9 @@ async function updateGoogleSheet(optionsArr) {
   
   await outputSheet.clear()
   
-  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE',  'TYPE', 'BID', 'OPEN INTEREST', 
-       'EXPOSURE PER CONTRACT', 'RETURN ON CAPITAL', 'SECTOR', 'INDUSTRY', '52 WEEK RANGE',
-       'MARGIN OF SAFETY', 'RETURN ON OPTION', 'CONTRACT', 'EARNINGS', 
+  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE',  'TYPE', 'BID', 'EXPOSURE PER CONTRACT', 
+      'RETURN ON CAPITAL', 'OPEN INTEREST', 'SECTOR', 'INDUSTRY', '52 WEEK RANGE',
+      'MARGIN OF SAFETY', 'RETURN ON OPTION', 'CONTRACT', 'EARNINGS', 
       'DIVIDEND', 'EXCHANGE', 'LAST PRICE', 'ASK', 'VOLUME', 'EXPIRY']
   await outputSheet.setHeaderRow(headers)
 
@@ -143,10 +143,11 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.type
     
     outputSheet.getCell(cellIndx, colIndx++).value = option.bid
-    outputSheet.getCell(cellIndx, colIndx++).value = option.openInterest
     
     outputSheet.getCell(cellIndx, colIndx++).value = option.exposurePerContract
     outputSheet.getCell(cellIndx, colIndx++).value = option.returnOnCapital
+
+    outputSheet.getCell(cellIndx, colIndx++).value = option.openInterest
     
     outputSheet.getCell(cellIndx, colIndx++).value = option.sector
     outputSheet.getCell(cellIndx, colIndx++).value = option.industry
