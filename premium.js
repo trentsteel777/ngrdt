@@ -215,7 +215,7 @@ function filterPuts(options, json) {
     let strike = option.strike.raw
     if(strike <= belowStrike) {
       let bid = option.bid ? option.bid.raw : 0
-      let returnOnCapital = bid / stockPrice
+      let returnOnCapital = bid / strike
       if(returnOnCapital >= 0.01) {
         filteredOptions.push({
           symbol : json.underlyingSymbol,
@@ -260,7 +260,7 @@ function filterCalls(options, json) {
     let strike = option.strike.raw
     if(strike >= aboveStrike) {
       let bid = option.bid ? option.bid.raw : 0
-      let returnOnCapital = bid / stockPrice
+      let returnOnCapital = bid / strike
       if(returnOnCapital >= 0.01) {
         filteredOptions.push({
           symbol : json.underlyingSymbol,
