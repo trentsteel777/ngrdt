@@ -1,0 +1,6 @@
+KOLD,Financial,Exchange Traded Fund
+VERU,Healthcare,Biotechnology
+AAPL,Technology,Consumer Electronics
+COIN,Technology,Software—Application
+ARKK,Financial,Exchange Traded Fund
+MNDY,Technology,Software—Application
