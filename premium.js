@@ -113,10 +113,10 @@ async function updateGoogleSheet(optionsArr) {
   
   await outputSheet.clear()
   
-  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE',  'TYPE', 'LAST PRICE',  'OPEN INTEREST', 
+  let headers = ['SYMBOL', 'STOCK PRICE', 'STRIKE',  'TYPE', 'BID', 'OPEN INTEREST', 
        'EXPOSURE PER CONTRACT', 'RETURN ON CAPITAL', 'SECTOR', 'INDUSTRY', '52 WEEK RANGE',
        'MARGIN OF SAFETY', 'RETURN ON OPTION', 'CONTRACT', 'EARNINGS', 
-      'DIVIDEND', 'EXCHANGE', 'BID', 'ASK', 'VOLUME', 'EXPIRY']
+      'DIVIDEND', 'EXCHANGE', 'LAST PRICE', 'ASK', 'VOLUME', 'EXPIRY']
   await outputSheet.setHeaderRow(headers)
 
   if(outputSheet.rowCount < optionsArr.length) {
@@ -142,7 +142,7 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.strike
     outputSheet.getCell(cellIndx, colIndx++).value = option.type
     
-    outputSheet.getCell(cellIndx, colIndx++).value = option.lastPrice
+    outputSheet.getCell(cellIndx, colIndx++).value = option.bid
     outputSheet.getCell(cellIndx, colIndx++).value = option.openInterest
     
     outputSheet.getCell(cellIndx, colIndx++).value = option.exposurePerContract
@@ -159,8 +159,8 @@ async function updateGoogleSheet(optionsArr) {
     outputSheet.getCell(cellIndx, colIndx++).value = option.earningsDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.dividendDate
     outputSheet.getCell(cellIndx, colIndx++).value = option.exchange
-
-    outputSheet.getCell(cellIndx, colIndx++).value = option.bid
+    
+    outputSheet.getCell(cellIndx, colIndx++).value = option.lastPrice
     outputSheet.getCell(cellIndx, colIndx++).value = option.ask
     outputSheet.getCell(cellIndx, colIndx++).value = option.volume
     outputSheet.getCell(cellIndx, colIndx++).value = option.expiry
