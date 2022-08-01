@@ -3,6 +3,7 @@
 
 const fs = require('fs')
 const axios = require('axios')
+var os = require("os");
 //const { EJDB2 } = require('ejdb2_node')
 const { thirdFridayOfNextMonth, today, formatUnixDate } = require('./src/utils.js')
 const { logger } = require('./src/logger.js')
@@ -17,7 +18,7 @@ const config = require('./application_properties.json')
 const isProd = config.environment === 'production'
 
 const symbols = fs.readFileSync('./src/resources/watchlist.txt').toString().split("\n")
-const symbolsLength = isProd ? symbols.length : 10
+const symbolsLength = isProd ? symbols.length : 1
 const OUTPUT_SHEET_ID = 0
 const OVERVIEW_SHEET_ID = 375661784
 const SECTORS_FILE_LOC = './src/resources/sectors.txt'
@@ -65,11 +66,13 @@ async function fetchAndSave() {
  
   let sectorInfoMap = getSectorInfoMap()
   for(var i = 0; i < outputArr.length; i++) {
-    let option = optionsArr[i]
+    let option = outputArr[i]
     let symbol = option.symbol
     let sectorInfo = sectorInfoMap[symbol]
     if(!sectorInfo) {
-      sectorInfo = addSectorInfoToFile(symbol)
+      sectorInfo = await addSectorInfoToFile(symbol)
+      sectorInfoMap[symbol] = sectorInfo
+      sleep.msleep(1000)
     }
     option.sector = sectorInfo.sector
     option.industry = sectorInfo.industry
@@ -310,7 +313,9 @@ function columnToLetter(column) {
 
 function getSectorInfoMap() {
   let sectorInfoMap = {}
-  const sectors = fs.readFileSync(SECTORS_FILE_LOC).toString().split("\n")
+  let sectors = fs.readFileSync(SECTORS_FILE_LOC).toString().split(os.EOL)
+
+  sectors = sectors.filter((el) => el.length > 0) // filter out empty lines
   for(let i = 0; i < sectors.length; i++) {
     let sectorInfoArray = sectors[i].trim().split(",")
     let symbol = sectorInfoArray[0]
@@ -327,32 +332,60 @@ function getSectorInfoMap() {
   return sectorInfoMap
 }
 
-function addSectorInfoToFile(symbol) {
-  let sector = ""
-  let industry = ""
-  let yahooProfileUrl=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
-  logger.info(`{${yahooProfileUrl}}`)
-  let profileResponse = await axios.get(yahooProfileUrl)
-  let summaryProfile	= profileResponse.data.quoteSummary.result[0].summaryProfile
-  if(summaryProfile.sector && summaryProfile.industry) {
-    sector = summaryProfile.sector.trim()
-    industry = summaryProfile.industry.trim()
+async function addSectorInfoToFile(symbol) {
+  let sector = null
+  let industry = null
+  let source = null
+  try {
+    source = "yahoo"
+    let yahooProfileUrl=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
+    let profileResponse = await axios.get(yahooProfileUrl)
+    let summaryProfile	= profileResponse.data.quoteSummary.result[0].summaryProfile
+    if(summaryProfile.sector && summaryProfile.industry) {
+      sector = summaryProfile.sector.trim()
+      industry = summaryProfile.industry.trim()
+    }
   }
-  else {
-    // FINVIZ
-    let finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}&ty=c&ta=1&p=d`
-    logger.info(`{${finvizUrl}}`)
-    let finvizResponse = await axios.get(finvizUrl)
-    let doc = new dom().parseFromString(finvizResponse.data)
-    let nodes = xpath.select("//table[@class='fullview-title']//tr[3]", doc)
-    let finvizInfoArr = nodes[0].firstChild.textContent.split("|")
-    sector = finvizInfoArr[0].trim()
-    industry = finvizInfoArr[1].trim()
+  catch(e) {
+    logger.error("Failed to get sector and industry from yahoo.\n" + e);
   }
+
+  if(!sector || !industry) {
+    try {
+      source = "finviz"
+      let finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}&ty=c&ta=1&p=d`
+      let finvizResponse = await axios.get(finvizUrl)
+
+      // https://stackoverflow.com/questions/56213117/how-to-silent-all-the-warning-messages-of-xml-dom-in-node-js
+      let doc = new dom({
+          locator: {},
+          errorHandler: { warning: function (w) { }, 
+          error: function (e) { }, 
+          fatalError: function (e) { console.error(e) } }
+        })
+        .parseFromString(finvizResponse.data)
+
+      let nodes = xpath.select("//table[@class='fullview-title']//tr[3]", doc)
+      let finvizInfoArr = nodes[0].firstChild.textContent.split("|")
+      sector = finvizInfoArr[0].trim()
+      industry = finvizInfoArr[1].trim()
+    }
+    catch(e) {
+      logger.error("Failed to get sector and industry from finviz.\n" + e);
+    }
+  }
+
   let line = `${symbol},${sector},${industry}`
-  fs.writeFile(SECTORS_FILE_LOC, line)
+  try {
+    fs.appendFileSync(SECTORS_FILE_LOC, line + os.EOL);
+    logger.info(`${line} - ${SECTORS_FILE_LOC} - ${source}`);
+  } catch (err) {
+    logger.error(err);
+  }
+  
   return {
     sector:sector,
     industry:industry
   }
+  
 }
