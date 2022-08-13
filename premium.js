@@ -5,7 +5,8 @@ const fs = require('fs')
 const axios = require('axios')
 var os = require("os");
 //const { EJDB2 } = require('ejdb2_node')
-const { thirdFridayOfNextMonth, today, formatUnixDate } = require('./src/utils.js')
+const { thirdFridayOfNextMonth, nextSixFridaysUnixArr /* thirdFridayOfNextMonth is removed from this */, formatUnixDate } = require('./src/utils.js')
+nextSixFridaysUnixArr.rem
 const { logger } = require('./src/logger.js')
 const sleep = require('sleep')
 const moment = require('moment')
@@ -34,30 +35,17 @@ async function fetchAndSave() {
   for (let i = 0; i < symbolsLength; i++) {
     try {
       symbol = symbols[i].trim()
-      let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbol}?formatted=true&lang=en-US&region=US&date=${thirdFridayOfNextMonth}`
-      
-      logger.info(`{${apiUrl}}`)
-      let response = await axios.get(apiUrl)
-      let json = response.data.optionChain.result[0]
-      //await db.put(symbol, json, today)
-      let puts = []
-      if(json.options[0].puts) {
-        puts = filterPuts(json.options[0].puts, json)
-        outputArr.push(...puts)
-      }
-      else {
-        logger.warn('No puts for: ' + symbol)
-      }
-      let calls = []
-      if(json.options[0].calls) {
-        calls = filterCalls(json.options[0].calls, json)
-        outputArr.push(...calls)
-      }
-      else {
-        logger.warn('No calls for: ' + symbol)
-      }   
-
+      let isFetchWeeklies = await requestOptionChain(symbol, thirdFridayOfNextMonth, outputArr)
       sleep.msleep(1000)
+
+      if(isFetchWeeklies.length > 0) {
+        let extraExpirationDates = isFetchWeeklies.filter( ed => nextSixFridaysUnixArr.indexOf(ed) > -1)
+        for(let j = 0; j < extraExpirationDates.length; j++) {
+          await requestOptionChain(symbol, extraExpirationDates[j], outputArr)
+          sleep.msleep(1000)
+        }
+      }
+      
     }
     catch (e) {
       logger.error(symbol + ': ' + e.message)
@@ -83,6 +71,36 @@ async function fetchAndSave() {
   //await db.close()
 
   logger.info(`Shutting down application.`)
+}
+
+async function requestOptionChain(symbol, expirationDateUnix, outputArr) {
+  let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbol}?formatted=true&lang=en-US&region=US&date=${expirationDateUnix}`
+    
+  logger.info(`{${apiUrl}}`)
+  let response = await axios.get(apiUrl)
+  let json = response.data.optionChain.result[0]
+  //await db.put(symbol, json, today)
+  let puts = []
+  if(json.options[0].puts) {
+    puts = filterPuts(json.options[0].puts, json)
+    outputArr.push(...puts)
+  }
+  else {
+    logger.warn('No puts for: ' + symbol)
+  }
+  let calls = []
+  if(json.options[0].calls) {
+    calls = filterCalls(json.options[0].calls, json)
+    outputArr.push(...calls)
+  }
+  else {
+    logger.warn('No calls for: ' + symbol)
+  }
+
+  if(calls.length > 0 || puts.length > 0) {
+    return json.expirationDates
+  }
+  return []
 }
 
 // https://codelabs.developers.google.com/codelabs/sheets-api/#5
