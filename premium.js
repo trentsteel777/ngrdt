@@ -48,7 +48,7 @@ async function fetchAndSave() {
       
     }
     catch (e) {
-      logger.error(symbol + ': ' + e.message)
+      logger.error(symbol + ': ' + e)
     }
   }
  
