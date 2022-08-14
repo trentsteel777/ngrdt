@@ -6,7 +6,7 @@ const axios = require('axios')
 var os = require("os");
 //const { EJDB2 } = require('ejdb2_node')
 const { thirdFridayOfNextMonth, nextSixFridaysUnixArr /* thirdFridayOfNextMonth is removed from this */, formatUnixDate } = require('./src/utils.js')
-nextSixFridaysUnixArr.rem
+
 const { logger } = require('./src/logger.js')
 const sleep = require('sleep')
 const moment = require('moment')
