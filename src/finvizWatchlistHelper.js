@@ -41,7 +41,7 @@ const logger = createLogger({
 
 
 function reqListener() {
-    var pattern = /(screener-link-primary">)([^<\/a>]+)(<\/a>)/g;
+    var pattern = /(c&p=d&b=1\" class=\"tab-link\">)([^<\/a>]+)(<\/a>)/g;
     var match;    
 
     while (match = pattern.exec(this.responseText)) {

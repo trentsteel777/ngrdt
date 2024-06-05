@@ -25,23 +25,57 @@ const OVERVIEW_SHEET_ID = 375661784
 const SECTORS_FILE_LOC = './src/resources/sectors.txt'
 const BATCH_SIZE = 1000
 
+let header_config = {
+  headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+      Accept: "*/*",
+      "Accept-Language": "en-GB,en;q=0.5",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      Referer: "https://finance.yahoo.com/quote/AAPL/options/",
+      "Content-Type": "text/plain",
+      Origin: "https://finance.yahoo.com",
+      Connection: "keep-alive",
+      Cookie: "GUC=AQABCAFmM-VmZEIeLAQy&s=AQAAAFcOYMD8&g=ZjKe3g; A1=d=AQABBAMFn2UCELaarNGHlTIObFHZwR1VlYQFEgABCAHlM2ZkZuIjb2UB9qMAAAcIAQWfZYKw0mI&S=AQAAAspdWcZCG_vcCQOG5cwIauQ; A3=d=AQABBAMFn2UCELaarNGHlTIObFHZwR1VlYQFEgABCAHlM2ZkZuIjb2UB9qMAAAcIAQWfZYKw0mI&S=AQAAAspdWcZCG_vcCQOG5cwIauQ; cmp=t=1717606887&j=1&u=1---&v=29; PRF=t%3DELOX%252BPANW%252BPYPL%252BCOIN%252BSLV%252BEURUSD%253DX%252BNVDA%252BPLTR%252BNKE%252BTSLA%252BSPY%252BGLD%252BTLT%252BIEF%252BBB%26newChartbetateaser%3D1; axids=gam=y-IVEA9vlE2uJkoK8j5IpbEbjgu6168y.F~A&dv360=eS0ySmc1Snh0RTJ1SDVKb0NNOTQ4TjBkMXhSQTZ2WEVEWH5B&ydsp=y-.h8eHlBE2uLifzKlhnTatUkr8toNw.Rj~A&tbla=y-pz4K8WVE2uKYEA.FnTcZun2697i1uAi6~A; tbla_id=a42f4d8d-6685-4b70-b592-29ca1fba5071-tuctd2c245e; A1S=d=AQABBAMFn2UCELaarNGHlTIObFHZwR1VlYQFEgABCAHlM2ZkZuIjb2UB9qMAAAcIAQWfZYKw0mI&S=AQAAAspdWcZCG_vcCQOG5cwIauQ; EuConsent=CP4KqwAP4KqwAAOACBENA3EoAP_gAEPgACiQJhNB9G7WTXFneXp2YPskOYUX0VBJ4MAwBgCBAcABzBIUIAwGVmAzJEyIICACGAIAIGJBIABtGAhAQEAAYIAFAABIAEEAABAAIGAAACAAAABACAAAAAAAAAAQgEAXMBQgmAZEAFoIQUhAhgAgAQAAIAAEAIgBAgQAEAAAQAAICAAIACgAAgAAAAAAAAAEAFAIEQAAAAECAotkfQTBADINSogCLAkJCIQcIIEAIgoCACgQAAAAECAAAAmCAoQBgEqMBEAIEQAAAAAAAAQEACAAACABCAAIAAgQAAAAAQAAAAACAAAEAAAAAAAAAAAAAAAAAAAAAAAAAMQAhBAACAACAAgoAAAABAAAAAAAAIARAAAAAAAAAAAAAAAAARAAAAAAAAAAAAAAAAAAAQIAAAAAAABAAILAAA",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-site",
+      Priority: "u=4",
+      TE: "trailers"
+  }
+}
+
+async function fetchCrumb() {
+  try {
+      const response = await axios.get("https://query2.finance.yahoo.com/v1/test/getcrumb", header_config);
+
+      const crumb = response.data;
+
+      logger.info("crumb: " + crumb);
+
+      return crumb;
+  } catch (e) {
+      logger.error(e);
+  }
+}
+
 async function fetchAndSave() {
   logger.info(`Starting application.`)
   //logger.info(`Opening database.`)
   //const db = await EJDB2.open('optionchains.db', { truncate: false })
 
+  let crumb = await fetchCrumb()
   let outputArr = []
   var symbol = null;
   for (let i = 0; i < symbolsLength; i++) {
     try {
       symbol = symbols[i].trim()
-      let isFetchWeeklies = await requestOptionChain(symbol, thirdFridayOfNextMonth, outputArr)
+      let isFetchWeeklies = await requestOptionChain(symbol, thirdFridayOfNextMonth, outputArr, crumb)
       sleep.msleep(1000)
 
       if(isFetchWeeklies.length > 0) {
         let extraExpirationDates = isFetchWeeklies.filter( ed => nextSixFridaysUnixArr.indexOf(ed) > -1)
         for(let j = 0; j < extraExpirationDates.length; j++) {
-          await requestOptionChain(symbol, extraExpirationDates[j], outputArr)
+          await requestOptionChain(symbol, extraExpirationDates[j], outputArr, crumb)
           sleep.msleep(1000)
         }
       }
@@ -73,11 +107,11 @@ async function fetchAndSave() {
   logger.info(`Shutting down application.`)
 }
 
-async function requestOptionChain(symbol, expirationDateUnix, outputArr) {
-  let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbol}?formatted=true&lang=en-US&region=US&date=${expirationDateUnix}`
+async function requestOptionChain(symbol, expirationDateUnix, outputArr, crumb) {
+  let apiUrl = `https://query2.finance.yahoo.com/v7/finance/options/${symbol}?formatted=true&lang=en-US&region=US&date=${expirationDateUnix}&crumb=${crumb}`
     
   logger.info(`{${apiUrl}}`)
-  let response = await axios.get(apiUrl)
+  let response = await axios.get(apiUrl, header_config)
   let json = response.data.optionChain.result[0]
   //await db.put(symbol, json, today)
   let puts = []
@@ -358,7 +392,7 @@ async function addSectorInfoToFile(symbol) {
   try {
     source = "yahoo"
     let yahooProfileUrl=`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryProfile`
-    let profileResponse = await axios.get(yahooProfileUrl)
+    let profileResponse = await axios.get(yahooProfileUrl, header_config)
     let summaryProfile	= profileResponse.data.quoteSummary.result[0].summaryProfile
     if(summaryProfile.sector && summaryProfile.industry) {
       sector = summaryProfile.sector.trim()
